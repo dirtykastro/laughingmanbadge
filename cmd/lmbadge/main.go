@@ -3,18 +3,13 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"image/png"
-	"io/ioutil"
 	"os"
 
-	"github.com/golang/freetype"
-	"github.com/nfnt/resize"
-	"golang.org/x/image/font"
+	"github.com/dirtykastro/laughingmanbadge/badge"
 )
 
 func main() {
-	badgeSize := 500
 
 	var badgeNoText image.Image
 
@@ -34,19 +29,9 @@ func main() {
 
 	file.Close()
 
-	resizedBadge := resize.Thumbnail(uint(badgeSize), uint(badgeSize), badgeNoText, resize.Lanczos3)
+	lmBadge := &badge.Badge{Img: badgeNoText}
 
-	im := image.NewRGBA(image.Rectangle{Max: image.Point{X: badgeSize, Y: badgeSize}})
-
-	for x := 0; x < badgeSize; x++ {
-
-		for y := 0; y < badgeSize; y++ {
-			r, g, b, a := resizedBadge.At(x, y).RGBA()
-			im.SetRGBA(x, y, color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)})
-		}
-	}
-
-	// Read the font data.
+	/*// Read the font data.
 	fontBytes, err := ioutil.ReadFile("./fonts/AWAKE.ttf")
 	if err != nil {
 		fmt.Println(err)
@@ -58,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fg := image.NewUniform(color.NRGBA{255, 128, 128, 255})
+	fg := image.NewUniform(color.NRGBA{255, 128, 128, 128})
 
 	c := freetype.NewContext()
 	c.SetDPI(72)
@@ -70,11 +55,13 @@ func main() {
 	c.SetHinting(font.HintingNone)
 
 	pt := freetype.Pt(10, 10+int(c.PointToFixed(30.5)>>6))
-	_, err = c.DrawString("KOTOKO", pt)
+	_, err = c.DrawString("A", pt)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
-	}
+	}*/
+
+	im := lmBadge.Render(500, "This is a test", 0)
 
 	out, err := os.Create("lm.png")
 	if err != nil {
