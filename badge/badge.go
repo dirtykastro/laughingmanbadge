@@ -1,29 +1,40 @@
 package badge
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"math"
 
 	"github.com/golang/freetype/raster"
+	"github.com/golang/freetype/truetype"
 	"github.com/nfnt/resize"
+	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 
 	gu "github.com/dirtykastro/graphicutils"
 )
 
 const badgeCircleRatio = 0.75
+const lettersPositionRatio = 0.65
 
 type node struct {
 	x, y, degree int
 }
 
 type Badge struct {
-	Img image.Image
+	Img      image.Image
+	FontFile []byte
 }
 
-func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out image.Image) {
+type CircleStep struct {
+	Angle float64
+	Sin   float64
+	Cos   float64
+}
+
+func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out image.Image, err error) {
 	resizedBadge := resize.Thumbnail(uint(badgeSize), uint(badgeSize), badge.Img, resize.Lanczos3)
 
 	im := image.NewRGBA(image.Rectangle{Max: image.Point{X: badgeSize, Y: badgeSize}})
@@ -32,16 +43,20 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 	halfBadgeSize := float64(badgeSize) / 2
 
-	steps := 50
+	steps := 30
+
+	var stepsData []CircleStep
 
 	for i := 0; i < steps; i++ {
-		sin, cos := math.Sincos(float64(i) * 360 / float64(steps) * math.Pi / 180)
+		angle := float64(i) * 2 / float64(steps) * math.Pi
+		sin, cos := math.Sincos(angle)
 
 		circleX := halfBadgeSize + (halfBadgeSize * sin * badgeCircleRatio)
 		circleY := halfBadgeSize + (halfBadgeSize * cos * badgeCircleRatio)
 
-		circle = append(circle, node{int(circleX), int(circleY), 1})
+		stepsData = append(stepsData, CircleStep{Angle: angle, Sin: sin, Cos: cos})
 
+		circle = append(circle, node{int(circleX), int(circleY), 1})
 	}
 
 	circle = append(circle, node{circle[0].x, circle[0].y, -1})
@@ -54,6 +69,62 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 	r.Rasterize(p)
 
 	draw.DrawMask(im, im.Bounds(), image.White, image.ZP, mask, image.ZP, draw.Over)
+
+	f, fontErr := truetype.Parse(badge.FontFile)
+	if fontErr != nil {
+		err = fontErr
+		return
+	}
+	fupe := fixed.Int26_6(f.FUnitsPerEm())
+
+	c0 := 'a'
+
+	i0 := f.Index(c0)
+	//hm := f.HMetric(fupe, i0)
+	g := &truetype.GlyphBuf{}
+	loadErr := g.Load(f, fupe, i0, font.HintingNone)
+	if loadErr != nil {
+		err = loadErr
+		return
+	}
+
+	printGlyph(g)
+
+	for _, step := range stepsData {
+
+		fmt.Println("step:", step)
+
+		r := raster.NewRasterizer(badgeSize, badgeSize)
+
+		var letterNodes []node
+
+		e := 0
+		for i, p := range g.Points {
+
+			pointX := int(halfBadgeSize+(halfBadgeSize*step.Sin*lettersPositionRatio)) + int(p.X>>4)
+			pointY := int(halfBadgeSize+(halfBadgeSize*step.Cos*lettersPositionRatio)) + int(p.Y>>4)
+
+			if p.Flags&0x01 != 0 {
+				letterNodes = append(letterNodes, node{pointX, pointY, 1})
+			} else {
+				letterNodes = append(letterNodes, node{pointX, pointY, 2})
+			}
+			if i+1 == int(g.Ends[e]) {
+
+				letterNodes = append(letterNodes, node{letterNodes[0].x, letterNodes[0].y, -1})
+
+				contour(r, letterNodes)
+				letterNodes = nil
+				e++
+			}
+		}
+
+		mask := image.NewAlpha(image.Rect(0, 0, badgeSize, badgeSize))
+		p := raster.NewAlphaSrcPainter(mask)
+		r.Rasterize(p)
+
+		draw.DrawMask(im, im.Bounds(), image.Black, image.ZP, mask, image.ZP, draw.Over)
+	}
 
 	for x := 0; x < badgeSize; x++ {
 
@@ -75,6 +146,24 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 	out = im
 
 	return
+}
+
+func printGlyph(g *truetype.GlyphBuf) {
+	//printBounds(g.Bounds)
+	fmt.Print("Points:\n---\n")
+	e := 0
+	for i, p := range g.Points {
+		fmt.Printf("%4d, %4d", p.X, p.Y)
+		if p.Flags&0x01 != 0 {
+			fmt.Print("  on\n")
+		} else {
+			fmt.Print("  off\n")
+		}
+		if i+1 == int(g.Ends[e]) {
+			fmt.Print("---\n")
+			e++
+		}
+	}
 }
 
 func p(n node) fixed.Point26_6 {

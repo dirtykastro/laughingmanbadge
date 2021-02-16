@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"io/ioutil"
 	"os"
 
 	"github.com/dirtykastro/laughingmanbadge/badge"
@@ -29,7 +30,13 @@ func main() {
 
 	file.Close()
 
-	lmBadge := &badge.Badge{Img: badgeNoText}
+	fontFile, err := ioutil.ReadFile("./fonts/RobotoMono-Medium.ttf")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	lmBadge := &badge.Badge{Img: badgeNoText, FontFile: fontFile}
 
 	/*// Read the font data.
 	fontBytes, err := ioutil.ReadFile("./fonts/AWAKE.ttf")
@@ -61,7 +68,11 @@ func main() {
 		os.Exit(1)
 	}*/
 
-	im := lmBadge.Render(500, "This is a test", 0)
+	im, err := lmBadge.Render(500, "This is a test", 0)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	out, err := os.Create("lm.png")
 	if err != nil {
