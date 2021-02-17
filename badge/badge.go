@@ -53,7 +53,7 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 	var stepsData []CircleStep
 
 	for i := 0; i < steps; i++ {
-		angle := float64(i) * 2 / float64(steps) * math.Pi
+		angle := float64(i) * -2 / float64(steps) * math.Pi
 		sin, cos := math.Sincos(angle)
 
 		circleX := halfBadgeSize + (halfBadgeSize * sin * badgeCircleRatio)
