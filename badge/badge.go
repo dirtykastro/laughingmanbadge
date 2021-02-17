@@ -19,6 +19,9 @@ import (
 const badgeCircleRatio = 0.75
 const lettersPositionRatio = 0.65
 
+const fontXoffset = 500
+const fontYoffset = 500
+
 type node struct {
 	x, y, degree int
 }
@@ -35,6 +38,8 @@ type CircleStep struct {
 }
 
 func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out image.Image, err error) {
+	blue := color.RGBA{50, 121, 153, 255}
+
 	resizedBadge := resize.Thumbnail(uint(badgeSize), uint(badgeSize), badge.Img, resize.Lanczos3)
 
 	im := image.NewRGBA(image.Rectangle{Max: image.Point{X: badgeSize, Y: badgeSize}})
@@ -43,7 +48,7 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 	halfBadgeSize := float64(badgeSize) / 2
 
-	steps := 30
+	steps := 50
 
 	var stepsData []CircleStep
 
@@ -77,53 +82,53 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 	}
 	fupe := fixed.Int26_6(f.FUnitsPerEm())
 
-	c0 := 'a'
+	//printGlyph(g)
 
-	i0 := f.Index(c0)
-	//hm := f.HMetric(fupe, i0)
-	g := &truetype.GlyphBuf{}
-	loadErr := g.Load(f, fupe, i0, font.HintingNone)
-	if loadErr != nil {
-		err = loadErr
-		return
-	}
+	for stepIndex, step := range stepsData {
 
-	printGlyph(g)
+		if len(text) > stepIndex {
+			letter := rune(text[stepIndex])
 
-	for _, step := range stepsData {
-
-		fmt.Println("step:", step)
-
-		r := raster.NewRasterizer(badgeSize, badgeSize)
-
-		var letterNodes []node
-
-		e := 0
-		for i, p := range g.Points {
-
-			pointX := int(halfBadgeSize+(halfBadgeSize*step.Sin*lettersPositionRatio)) + int(p.X>>4)
-			pointY := int(halfBadgeSize+(halfBadgeSize*step.Cos*lettersPositionRatio)) + int(p.Y>>4)
-
-			if p.Flags&0x01 != 0 {
-				letterNodes = append(letterNodes, node{pointX, pointY, 1})
-			} else {
-				letterNodes = append(letterNodes, node{pointX, pointY, 2})
+			i0 := f.Index(letter)
+			//hm := f.HMetric(fupe, i0)
+			g := &truetype.GlyphBuf{}
+			loadErr := g.Load(f, fupe, i0, font.HintingNone)
+			if loadErr != nil {
+				err = loadErr
+				return
 			}
-			if i+1 == int(g.Ends[e]) {
 
-				letterNodes = append(letterNodes, node{letterNodes[0].x, letterNodes[0].y, -1})
+			r := raster.NewRasterizer(badgeSize, badgeSize)
 
-				contour(r, letterNodes)
-				letterNodes = nil
-				e++
+			var letterNodes []node
+
+			e := 0
+			for i, p := range g.Points {
+
+				pointX := int(halfBadgeSize+(halfBadgeSize*step.Sin*lettersPositionRatio)) + int((p.X-fontXoffset)>>6)
+				pointY := int(halfBadgeSize+(halfBadgeSize*step.Cos*lettersPositionRatio)) + int((p.Y-fontYoffset)>>6)
+
+				if p.Flags&0x01 != 0 {
+					letterNodes = append(letterNodes, node{pointX, pointY, 1})
+				} else {
+					letterNodes = append(letterNodes, node{pointX, pointY, 2})
+				}
+				if i+1 == int(g.Ends[e]) {
+
+					letterNodes = append(letterNodes, node{letterNodes[0].x, letterNodes[0].y, -1})
+
+					contour(r, letterNodes)
+					letterNodes = nil
+					e++
+				}
 			}
+
+			mask := image.NewAlpha(image.Rect(0, 0, badgeSize, badgeSize))
+			p := raster.NewAlphaSrcPainter(mask)
+			r.Rasterize(p)
+
+			draw.DrawMask(im, im.Bounds(), &image.Uniform{blue}, image.ZP, mask, image.ZP, draw.Over)
 		}
-
-		mask := image.NewAlpha(image.Rect(0, 0, badgeSize, badgeSize))
-		p := raster.NewAlphaSrcPainter(mask)
-		r.Rasterize(p)
-
-		draw.DrawMask(im, im.Bounds(), image.Black, image.ZP, mask, image.ZP, draw.Over)
 	}
 
 	for x := 0; x < badgeSize; x++ {

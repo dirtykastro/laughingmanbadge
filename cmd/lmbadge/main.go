@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/png"
@@ -11,6 +12,10 @@ import (
 )
 
 func main() {
+
+	text := flag.String("text", "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", "text to display in the badge")
+
+	flag.Parse()
 
 	var badgeNoText image.Image
 
@@ -68,7 +73,7 @@ func main() {
 		os.Exit(1)
 	}*/
 
-	im, err := lmBadge.Render(500, "This is a test", 0)
+	im, err := lmBadge.Render(500, *text, 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
