@@ -22,6 +22,8 @@ const lettersPositionRatio = 0.65
 const fontXoffset = 500
 const fontYoffset = 500
 
+const startAngleRatio = 0.4
+
 type node struct {
 	x, y, degree int
 }
@@ -53,7 +55,7 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 	var stepsData []CircleStep
 
 	for i := 0; i < steps; i++ {
-		angle := float64(i) * -2 / float64(steps) * math.Pi
+		angle := (float64(i) * -2 / float64(steps) * math.Pi) + (math.Pi * startAngleRatio)
 		sin, cos := math.Sincos(angle)
 
 		circleX := halfBadgeSize + (halfBadgeSize * sin * badgeCircleRatio)
@@ -104,9 +106,12 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 			e := 0
 			for i, p := range g.Points {
+				glyphPointX, glyphPointY := rotate(step.Angle, int(p.X-fontXoffset), int(p.Y-fontYoffset))
 
-				pointX := int(halfBadgeSize+(halfBadgeSize*step.Sin*lettersPositionRatio)) + int((p.X-fontXoffset)>>6)
-				pointY := int(halfBadgeSize+(halfBadgeSize*step.Cos*lettersPositionRatio)) + int((p.Y-fontYoffset)>>6)
+				fmt.Println("points:", p.X, p.Y, "rotated points:", glyphPointX, glyphPointY)
+
+				pointX := int(halfBadgeSize+(halfBadgeSize*step.Sin*lettersPositionRatio)) + int((glyphPointX)>>6)
+				pointY := int(halfBadgeSize+(halfBadgeSize*step.Cos*lettersPositionRatio)) + int((glyphPointY)>>6)
 
 				if p.Flags&0x01 != 0 {
 					letterNodes = append(letterNodes, node{pointX, pointY, 1})
@@ -181,7 +186,7 @@ func p(n node) fixed.Point26_6 {
 }
 
 func rotate(angle float64, x int, y int) (nx int, ny int) {
-	sin, cos := math.Sincos(angle * math.Pi / 180)
+	sin, cos := math.Sincos(angle)
 
 	nx = int(cos*float64(x) - sin*float64(y))
 	ny = int(sin*float64(x) + cos*float64(y))
