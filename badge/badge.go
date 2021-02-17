@@ -17,7 +17,7 @@ import (
 )
 
 const badgeCircleRatio = 0.75
-const lettersPositionRatio = 0.65
+const lettersPositionRatio = 0.62
 
 const fontXoffset = 500
 const fontYoffset = 500
@@ -50,7 +50,7 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 	halfBadgeSize := float64(badgeSize) / 2
 
-	steps := 50
+	steps := 54
 
 	var stepsData []CircleStep
 
@@ -86,10 +86,14 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 	//printGlyph(g)
 
+	extendedText := extendText(steps, text, 0.0)
+
+	fontSizeRatio := float64(badgeSize) / 500
+
 	for stepIndex, step := range stepsData {
 
-		if len(text) > stepIndex {
-			letter := rune(text[stepIndex])
+		if stepIndex < (steps - 2) {
+			letter := rune(extendedText[stepIndex])
 
 			i0 := f.Index(letter)
 			//hm := f.HMetric(fupe, i0)
@@ -106,7 +110,7 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 			e := 0
 			for i, p := range g.Points {
-				glyphPointX, glyphPointY := rotate(step.Angle*-1, int(fontXoffset-p.X), int(p.Y-fontYoffset))
+				glyphPointX, glyphPointY := rotate(step.Angle*-1, int(float64(fontXoffset-p.X)*fontSizeRatio), int(float64(p.Y-fontYoffset)*fontSizeRatio))
 
 				fmt.Println("points:", p.X, p.Y, "rotated points:", glyphPointX, glyphPointY)
 
@@ -192,6 +196,17 @@ func rotate(angle float64, x int, y int) (nx int, ny int) {
 	ny = int(sin*float64(x) + cos*float64(y))
 
 	return
+}
+
+func extendText(steps int, text string, rotation float64) string {
+
+	if len(text) < steps {
+		for len(text) < steps {
+			text += "    " + text
+		}
+	}
+
+	return text
 }
 
 func contour(r *raster.Rasterizer, ns []node) {

@@ -14,6 +14,8 @@ import (
 func main() {
 
 	text := flag.String("text", "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", "text to display in the badge")
+	rotation := flag.Float64("rotation", 0.0, "rotate text angle")
+	size := flag.Int("size", 200, "size of badge")
 
 	flag.Parse()
 
@@ -73,7 +75,7 @@ func main() {
 		os.Exit(1)
 	}*/
 
-	im, err := lmBadge.Render(500, *text, 0)
+	im, err := lmBadge.Render(*size, *text, *rotation)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
