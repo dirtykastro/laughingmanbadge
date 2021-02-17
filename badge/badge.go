@@ -106,7 +106,7 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 			e := 0
 			for i, p := range g.Points {
-				glyphPointX, glyphPointY := rotate(step.Angle*-1, int(p.X-fontXoffset), int(p.Y-fontYoffset))
+				glyphPointX, glyphPointY := rotate(step.Angle*-1, int(fontXoffset-p.X), int(p.Y-fontYoffset))
 
 				fmt.Println("points:", p.X, p.Y, "rotated points:", glyphPointX, glyphPointY)
 
