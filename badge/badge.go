@@ -208,10 +208,8 @@ func rotate(angle float64, x int, y int) (nx int, ny int) {
 
 func extendText(steps int, text string, stepsOffset int) string {
 
-	if len(text) < (steps + stepsOffset) {
-		for len(text) < steps {
-			text += "    " + text
-		}
+	for len(text) < (steps + stepsOffset) {
+		text += " " + text
 	}
 
 	return text[stepsOffset:]
