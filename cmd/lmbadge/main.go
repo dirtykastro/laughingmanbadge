@@ -16,8 +16,15 @@ func main() {
 	text := flag.String("text", "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", "text to display in the badge")
 	rotation := flag.Float64("rotation", 0.0, "rotate text angle")
 	size := flag.Int("size", 200, "size of badge")
+	outputFile := flag.String("file", "", "destination file name")
 
 	flag.Parse()
+
+	if *outputFile == "" {
+		fmt.Println("the destination file is required")
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
 
 	var badgeNoText image.Image
 
@@ -81,7 +88,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	out, err := os.Create("lm.png")
+	out, err := os.Create(*outputFile)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
