@@ -1,15 +1,21 @@
 package main
 
 import (
+	"bytes"
+	"embed"
 	"flag"
 	"fmt"
 	"image"
 	"image/png"
-	"io/ioutil"
 	"os"
 
 	"github.com/dirtykastro/laughingmanbadge/badge"
 )
+
+//go:embed laughing_man.png
+//go:embed RobotoMono-Medium.ttf
+
+var f embed.FS
 
 func main() {
 
@@ -28,23 +34,21 @@ func main() {
 
 	var badgeNoText image.Image
 
-	file, err := os.Open("laughing_man.png")
+	file, err := f.ReadFile("laughing_man.png")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 
 	}
 
-	badgeNoText, err = png.Decode(file)
+	badgeNoText, err = png.Decode(bytes.NewReader(file))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 
 	}
 
-	file.Close()
-
-	fontFile, err := ioutil.ReadFile("./fonts/RobotoMono-Medium.ttf")
+	fontFile, err := f.ReadFile("RobotoMono-Medium.ttf")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
