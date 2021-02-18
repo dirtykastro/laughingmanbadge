@@ -22,7 +22,7 @@ const lettersPositionRatio = 0.62
 const fontXoffset = 500
 const fontYoffset = 500
 
-const startAngleRatio = 0.4
+const startAngleRatio = 0.44
 
 type node struct {
 	x, y, degree int
@@ -40,6 +40,10 @@ type CircleStep struct {
 }
 
 func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out image.Image, err error) {
+
+	//add space to hide the letters correctly
+	text = " " + text
+
 	blue := color.RGBA{50, 121, 153, 255}
 
 	resizedBadge := resize.Thumbnail(uint(badgeSize), uint(badgeSize), badge.Img, resize.Lanczos3)
@@ -54,8 +58,14 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 	var stepsData []CircleStep
 
+	anglePerStep := math.Pi / float64(steps)
+
+	stepsOffset := math.Floor(rotation / anglePerStep)
+
+	fmt.Println("steps offset", stepsOffset)
+
 	for i := 0; i < steps; i++ {
-		angle := (float64(i) * -2 / float64(steps) * math.Pi) + (math.Pi * startAngleRatio)
+		angle := (float64(i) * -2 / float64(steps) * math.Pi) + (math.Pi * startAngleRatio) + (rotation - (stepsOffset * anglePerStep))
 		sin, cos := math.Sincos(angle)
 
 		circleX := halfBadgeSize + (halfBadgeSize * sin * badgeCircleRatio)
@@ -86,13 +96,13 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 
 	//printGlyph(g)
 
-	extendedText := extendText(steps, text, 0.0)
+	extendedText := extendText(steps, text, int(stepsOffset))
 
 	fontSizeRatio := float64(badgeSize) / 500
 
 	for stepIndex, step := range stepsData {
 
-		if stepIndex < (steps - 2) {
+		if stepIndex < (steps - 1) {
 			letter := rune(extendedText[stepIndex])
 
 			i0 := f.Index(letter)
@@ -111,8 +121,6 @@ func (badge *Badge) Render(badgeSize int, text string, rotation float64) (out im
 			e := 0
 			for i, p := range g.Points {
 				glyphPointX, glyphPointY := rotate(step.Angle*-1, int(float64(fontXoffset-p.X)*fontSizeRatio), int(float64(p.Y-fontYoffset)*fontSizeRatio))
-
-				fmt.Println("points:", p.X, p.Y, "rotated points:", glyphPointX, glyphPointY)
 
 				pointX := int(halfBadgeSize+(halfBadgeSize*step.Sin*lettersPositionRatio)) + int((glyphPointX)>>6)
 				pointY := int(halfBadgeSize+(halfBadgeSize*step.Cos*lettersPositionRatio)) + int((glyphPointY)>>6)
@@ -198,15 +206,15 @@ func rotate(angle float64, x int, y int) (nx int, ny int) {
 	return
 }
 
-func extendText(steps int, text string, rotation float64) string {
+func extendText(steps int, text string, stepsOffset int) string {
 
-	if len(text) < steps {
+	if len(text) < (steps + stepsOffset) {
 		for len(text) < steps {
 			text += "    " + text
 		}
 	}
 
-	return text
+	return text[stepsOffset:]
 }
 
 func contour(r *raster.Rasterizer, ns []node) {
