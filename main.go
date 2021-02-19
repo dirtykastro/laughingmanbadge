@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
+
 	//"image/color"
 	"os"
 
@@ -41,7 +43,7 @@ func main() {
 		defer img.Close()
 
 		// color for the rect when faces detected
-		//blue := color.RGBA{0, 0, 255, 0}
+		blue := color.RGBA{0, 0, 255, 0}
 
 		// load classifier to recognize faces
 		classifier := gocv.NewCascadeClassifier()
@@ -85,11 +87,11 @@ func main() {
 			// draw a rectangle around each face on the original image,
 			// along with text identifying as "Human"
 			for _, r := range rects {
-				/*gocv.Rectangle(&img, r, blue, 3)
+				gocv.Rectangle(&img, r, blue, 3)
 
 				size := gocv.GetTextSize("Human", gocv.FontHersheyPlain, 1.2, 2)
 				pt := image.Pt(r.Min.X+(r.Min.X/2)-(size.X/2), r.Min.Y-2)
-				gocv.PutText(&img, "Human", pt, gocv.FontHersheyPlain, 1.2, blue, 2)*/
+				gocv.PutText(&img, "Human", pt, gocv.FontHersheyPlain, 1.2, blue, 2)
 
 				lmResized := gocv.NewMatWithSize(videoWidth, videoHeight, gocv.MatTypeCV8UC3)
 				defer lmResized.Close()
