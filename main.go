@@ -110,8 +110,8 @@ func main() {
 			// along with text identifying as "Human"
 
 			badgeSize := 0
-			//badgePositionX := 0
-			//badgePositionY := 0
+			badgePositionX := 0
+			badgePositionY := 0
 
 			for _, r := range rects {
 				rectWidth := r.Max.X - r.Min.X
@@ -125,10 +125,12 @@ func main() {
 
 				if rectSize > badgeSize {
 					badgeSize = rectSize
-					//badgePositionX = r.Min.X
-					//badgePositionY = r.Min.Y
+					badgePositionX = r.Min.X
+					badgePositionY = r.Min.Y
 				}
 			}
+
+			fmt.Println("position", badgePositionX, badgePositionY)
 
 			if badgeSize > 0 {
 				im, err := lmBadge.Render(badgeSize, "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", 0.0)
@@ -138,23 +140,26 @@ func main() {
 
 					for x := 0; x < badgeSize; x++ {
 						for y := 0; y < badgeSize; y++ {
+
+							destX := x + badgePositionX
+							destY := y + badgePositionY
+
 							// get video pixel color values
-							b0 := img.GetUCharAt(x, y*totalChannels+0)
-							g0 := img.GetUCharAt(x, y*totalChannels+1)
-							r0 := img.GetUCharAt(x, y*totalChannels+2)
+							b0 := img.GetUCharAt(destY, destX*totalChannels+0)
+							g0 := img.GetUCharAt(destY, destX*totalChannels+1)
+							r0 := img.GetUCharAt(destY, destX*totalChannels+2)
 
 							bgPixel := gu.Pixel{R: uint8(r0), G: uint8(g0), B: uint8(b0), A: 255}
 
-							// opencv order is inverted
-							r1, g1, b1, a1 := im.At(y, x).RGBA()
+							r1, g1, b1, a1 := im.At(x, y).RGBA()
 
 							fgPixel := gu.Pixel{R: uint8(r1), G: uint8(g1), B: uint8(b1), A: uint8(a1)}
 
 							pixel := gu.BlendPixel(fgPixel, bgPixel)
 
-							img.SetUCharAt(x, y*totalChannels+0, pixel.B)
-							img.SetUCharAt(x, y*totalChannels+1, pixel.G)
-							img.SetUCharAt(x, y*totalChannels+2, pixel.R)
+							img.SetUCharAt(destY, destX*totalChannels+0, pixel.B)
+							img.SetUCharAt(destY, destX*totalChannels+1, pixel.G)
+							img.SetUCharAt(destY, destX*totalChannels+2, pixel.R)
 
 						}
 					}
