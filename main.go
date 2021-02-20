@@ -1,15 +1,23 @@
 package main
 
 import (
+	"bytes"
+	"embed"
 	"fmt"
 	"image"
-	"image/color"
-
-	//"image/color"
+	"image/png"
 	"os"
+
+	gu "github.com/dirtykastro/graphicutils"
+	"github.com/dirtykastro/laughingmanbadge/badge"
 
 	"gocv.io/x/gocv"
 )
+
+//go:embed cmd/lmbadge/laughing_man.png
+//go:embed cmd/lmbadge/RobotoMono-Medium.ttf
+
+var f embed.FS
 
 // location of the frontface haarcascade file
 const faceCascadeFile = "/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml"
@@ -42,9 +50,6 @@ func main() {
 		img := gocv.NewMat()
 		defer img.Close()
 
-		// color for the rect when faces detected
-		blue := color.RGBA{0, 0, 255, 0}
-
 		// load classifier to recognize faces
 		classifier := gocv.NewCascadeClassifier()
 		defer classifier.Close()
@@ -54,12 +59,29 @@ func main() {
 			return
 		}
 
-		/*launghingManImg := gocv.IMRead("images/laughing_man.png", gocv.IMReadUnchanged)
+		var badgeNoText image.Image
 
-		if launghingManImg.Empty() {
-			fmt.Println("problem reading launghing man png")
+		file, err := f.ReadFile("cmd/lmbadge/laughing_man.png")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+
 		}
-		defer launghingManImg.Close()*/
+
+		badgeNoText, err = png.Decode(bytes.NewReader(file))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+
+		}
+
+		fontFile, err := f.ReadFile("cmd/lmbadge/RobotoMono-Medium.ttf")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		lmBadge := &badge.Badge{Img: badgeNoText, FontFile: fontFile}
 
 		fmt.Printf("start reading video: %s\n", filePath)
 		for {
@@ -72,10 +94,10 @@ func main() {
 				continue
 			}
 
-			dimensions := img.Size()
+			/*dimensions := img.Size()
 
 			videoWidth := dimensions[0]
-			videoHeight := dimensions[1]
+			videoHeight := dimensions[1]*/
 
 			//fmt.Println("Video Size", videoWidth, "x", videoHeight, "channels :", img.Channels())
 
@@ -86,20 +108,58 @@ func main() {
 
 			// draw a rectangle around each face on the original image,
 			// along with text identifying as "Human"
+
+			badgeSize := 0
+			//badgePositionX := 0
+			//badgePositionY := 0
+
 			for _, r := range rects {
-				gocv.Rectangle(&img, r, blue, 3)
+				rectWidth := r.Max.X - r.Min.X
+				rectHeight := r.Max.Y - r.Min.Y
 
-				size := gocv.GetTextSize("Human", gocv.FontHersheyPlain, 1.2, 2)
-				pt := image.Pt(r.Min.X+(r.Min.X/2)-(size.X/2), r.Min.Y-2)
-				gocv.PutText(&img, "Human", pt, gocv.FontHersheyPlain, 1.2, blue, 2)
+				rectSize := rectWidth
 
-				lmResized := gocv.NewMatWithSize(videoWidth, videoHeight, gocv.MatTypeCV8UC3)
-				defer lmResized.Close()
+				if rectHeight > rectSize {
+					rectSize = rectHeight
+				}
 
-				//gocv.Resize(launghingManImg, &lmResized, image.Pt(videoWidth, videoHeight), 0, 0, gocv.InterpolationNearestNeighbor)
+				if rectSize > badgeSize {
+					badgeSize = rectSize
+					//badgePositionX = r.Min.X
+					//badgePositionY = r.Min.Y
+				}
+			}
 
-				if r.Min.X > 0 {
-					gocv.AddWeighted(img, 1.0, lmResized, 1.0, 0.0, &img)
+			if badgeSize > 0 {
+				im, err := lmBadge.Render(badgeSize, "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", 0.0)
+				if err == nil {
+
+					totalChannels := img.Channels()
+
+					for x := 0; x < badgeSize; x++ {
+						for y := 0; y < badgeSize; y++ {
+							// get video pixel color values
+							b0 := img.GetUCharAt(x, y*totalChannels+0)
+							g0 := img.GetUCharAt(x, y*totalChannels+1)
+							r0 := img.GetUCharAt(x, y*totalChannels+2)
+
+							bgPixel := gu.Pixel{R: uint8(r0), G: uint8(g0), B: uint8(b0), A: 255}
+
+							// opencv order is inverted
+							r1, g1, b1, a1 := im.At(y, x).RGBA()
+
+							fgPixel := gu.Pixel{R: uint8(r1), G: uint8(g1), B: uint8(b1), A: uint8(a1)}
+
+							pixel := gu.BlendPixel(fgPixel, bgPixel)
+
+							img.SetUCharAt(x, y*totalChannels+0, pixel.B)
+							img.SetUCharAt(x, y*totalChannels+1, pixel.G)
+							img.SetUCharAt(x, y*totalChannels+2, pixel.R)
+
+						}
+					}
+				} else {
+					fmt.Println(err)
 				}
 			}
 
