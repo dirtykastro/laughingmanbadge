@@ -107,8 +107,8 @@ func main() {
 			fmt.Println("rotation", rotation)
 
 			// detect faces
-			rects := classifier.DetectMultiScale(img)
-			//rects := classifier.DetectMultiScaleWithParams(img, 1.1, 10, 0, image.Point{X: 100, Y: 100}, image.Point{X: 2000, Y: 2000})
+			//rects := classifier.DetectMultiScale(img)
+			rects := classifier.DetectMultiScaleWithParams(img, 1.1, 10, 0, image.Point{X: 100, Y: 100}, image.Point{X: 2000, Y: 2000})
 			fmt.Printf("found %d faces\n", len(rects))
 
 			// draw a rectangle around each face on the original image,
