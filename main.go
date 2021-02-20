@@ -22,6 +22,9 @@ var f embed.FS
 // location of the frontface haarcascade file
 const faceCascadeFile = "/usr/local/share/opencv4/haarcascades/haarcascade_frontalface_default.xml"
 
+const badgeFaceRatio float64 = 2.0
+const rotationRatio float64 = 0.1
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Cover Faces with Laughing Man Badge")
@@ -83,6 +86,8 @@ func main() {
 
 		lmBadge := &badge.Badge{Img: badgeNoText, FontFile: fontFile}
 
+		rotation := 0.0
+
 		fmt.Printf("start reading video: %s\n", filePath)
 		for {
 			if ok := video.Read(&img); !ok {
@@ -94,16 +99,16 @@ func main() {
 				continue
 			}
 
-			/*dimensions := img.Size()
+			dimensions := img.Size()
 
-			videoWidth := dimensions[0]
-			videoHeight := dimensions[1]*/
+			videoWidth := dimensions[1]
+			videoHeight := dimensions[0]
 
-			//fmt.Println("Video Size", videoWidth, "x", videoHeight, "channels :", img.Channels())
+			fmt.Println("rotation", rotation)
 
 			// detect faces
-			//rects := classifier.DetectMultiScale(img)
-			rects := classifier.DetectMultiScaleWithParams(img, 1.1, 10, 0, image.Point{X: 400, Y: 400}, image.Point{X: 2000, Y: 2000})
+			rects := classifier.DetectMultiScale(img)
+			//rects := classifier.DetectMultiScaleWithParams(img, 1.1, 10, 0, image.Point{X: 100, Y: 100}, image.Point{X: 2000, Y: 2000})
 			fmt.Printf("found %d faces\n", len(rects))
 
 			// draw a rectangle around each face on the original image,
@@ -123,17 +128,20 @@ func main() {
 					rectSize = rectHeight
 				}
 
+				rectSize = int(float64(rectSize) * badgeFaceRatio)
+
 				if rectSize > badgeSize {
 					badgeSize = rectSize
-					badgePositionX = r.Min.X
-					badgePositionY = r.Min.Y
+
+					badgeOffset := int(float64(badgeSize) * ((badgeFaceRatio - 1) / 4))
+
+					badgePositionX = r.Min.X - badgeOffset
+					badgePositionY = r.Min.Y - badgeOffset
 				}
 			}
 
-			fmt.Println("position", badgePositionX, badgePositionY)
-
 			if badgeSize > 0 {
-				im, err := lmBadge.Render(badgeSize, "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", 0.0)
+				im, err := lmBadge.Render(badgeSize, "I thought what I'd do was, I'd pretend I was one of those deaf-mutes.", rotation)
 				if err == nil {
 
 					totalChannels := img.Channels()
@@ -144,29 +152,33 @@ func main() {
 							destX := x + badgePositionX
 							destY := y + badgePositionY
 
-							// get video pixel color values
-							b0 := img.GetUCharAt(destY, destX*totalChannels+0)
-							g0 := img.GetUCharAt(destY, destX*totalChannels+1)
-							r0 := img.GetUCharAt(destY, destX*totalChannels+2)
+							if destX >= 0 && destY >= 0 && destX < videoWidth && destY < videoHeight {
 
-							bgPixel := gu.Pixel{R: uint8(r0), G: uint8(g0), B: uint8(b0), A: 255}
+								// get video pixel color values
+								b0 := img.GetUCharAt(destY, destX*totalChannels+0)
+								g0 := img.GetUCharAt(destY, destX*totalChannels+1)
+								r0 := img.GetUCharAt(destY, destX*totalChannels+2)
 
-							r1, g1, b1, a1 := im.At(x, y).RGBA()
+								bgPixel := gu.Pixel{R: uint8(r0), G: uint8(g0), B: uint8(b0), A: 255}
 
-							fgPixel := gu.Pixel{R: uint8(r1), G: uint8(g1), B: uint8(b1), A: uint8(a1)}
+								r1, g1, b1, a1 := im.At(x, y).RGBA()
 
-							pixel := gu.BlendPixel(fgPixel, bgPixel)
+								fgPixel := gu.Pixel{R: uint8(r1), G: uint8(g1), B: uint8(b1), A: uint8(a1)}
 
-							img.SetUCharAt(destY, destX*totalChannels+0, pixel.B)
-							img.SetUCharAt(destY, destX*totalChannels+1, pixel.G)
-							img.SetUCharAt(destY, destX*totalChannels+2, pixel.R)
+								pixel := gu.BlendPixel(fgPixel, bgPixel)
 
+								img.SetUCharAt(destY, destX*totalChannels+0, pixel.B)
+								img.SetUCharAt(destY, destX*totalChannels+1, pixel.G)
+								img.SetUCharAt(destY, destX*totalChannels+2, pixel.R)
+							}
 						}
 					}
 				} else {
 					fmt.Println(err)
 				}
 			}
+
+			rotation += rotationRatio
 
 			// show the image in the window, and wait 1 millisecond
 			window.IMShow(img)
